@@ -3,7 +3,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import matplotlib.pyplot as plt
-from prova import Circle_indexes, Circle, F_Circle
+from functions_0 import Circle_indexes, Circle, F_Circle
 
 class GENEO(nn.Module):
     def __init__(self, r_1,r_2,h_3,r_4):
