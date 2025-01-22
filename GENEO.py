@@ -4,35 +4,37 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
-from functions_0 import Circle_indexes, Circle, F_Circle
 
 class GENEO(nn.Module):
-    def __init__(self, r_1,r_2,h_3,r_4):
+    def __init__(self, k, patterns):
         super().__init__()  
+        self.patterns = patterns
+        self.k = k
 
     def forward(self, x):
-
-        return None
+        F_k = GENEO_1(self.patterns,x)
+        T_k = GENEO_3(self.k,F_k)
+        return GENEO_4(T_k)
     
     
-def GENEO_1(pattern,image): 
-    (pattern_dimension_x, pattern_dimension_y) = pattern.size()
-    image_dimensions = image.size()
-    out =  F.pad(image, (pattern_dimension_y,pattern_dimension_y,pattern_dimension_x,pattern_dimension_x) , "constant", 0)
-    out_image = torch.zeros(image_dimensions)
-    image_window = torch.zeros(pattern.size())
-    for i in range(image_dimensions[0]):
-        for j in range(image_dimensions[1]):
-            for s in range(pattern_dimension_y):
-                for t in range(pattern_dimension_x):
-                    image_window[s][t] = out[i+s][j+t]
-            # print(pattern_dimension_y)
-            # print(pattern_dimension_x)
-            # print(pattern.shape)
-            # print(image_window.shape)
-            sum = torch.sum(pattern-image_window)/(pattern_dimension_x*pattern_dimension_y)
-            out_image[i][j] = 1 - sum
-    return out_image
+def GENEO_1(patterns,image):
+    final_out=[]
+    for pattern in patterns:
+        (pattern_dimension_x, pattern_dimension_y) = pattern.size()
+        image_dimensions = image.size()
+        out_p =  F.pad(image, (pattern_dimension_y,pattern_dimension_y,pattern_dimension_x,pattern_dimension_x) , "constant", 0)
+        out_image = torch.zeros(image_dimensions)
+        image_window = torch.zeros(pattern.size())
+        for i in range(image_dimensions[0]):
+            for j in range(image_dimensions[1]):
+                for s in range(pattern_dimension_y):
+                    for t in range(pattern_dimension_x):
+                        image_window[s][t] = out_p[i+s][j+t]
+                sum = torch.sum(pattern-image_window)/(pattern_dimension_x*pattern_dimension_y)
+                out_image[i][j] = 1 - sum
+        final_out.append(out_image.unsqueeze(0))
+    out = torch.cat(final_out, dim = 0)
+    return out
 
 
 def GENEO_2(functions):
@@ -54,18 +56,4 @@ def GENEO_4(image):
     norm = torch.norm(image, p="inf")
     return 1/norm
 
-image = torch.zeros((100,100))
-
-pattern = torch.randint(0,9,(12,2))
-pattern_image=torch.zeros((10,10))
-for ii in range(10):
-    for jj in range(10):
-        pattern_image[ii][jj]=1
-centers = torch.randint(0,90,(12,2))
-for [c_x,c_y] in centers:
-    for [p_x,p_y] in pattern:
-        image[c_x+p_x][c_y+p_y] = 1
-
-out = GENEO_1(pattern_image, image)
-plt.imshow(out,cmap="gray")
-plt.show()
+patterns = torch.load("patterns.pt")
