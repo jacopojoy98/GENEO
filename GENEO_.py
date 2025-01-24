@@ -9,12 +9,13 @@ class GENEO(nn.Module):
     def __init__(self, patterns):
         super().__init__()  
         self.patterns = patterns
-        self.vectors = nn.ParameterList([nn.Parameter(torch.randn(2)) for i in range(len(patterns))])
+        self.vectors = nn.ParameterList([nn.Parameter(torch.randn(2), requires_grad=True) for i in range(len(patterns))])
 
     def forward(self, x):
         F_k = GENEO_1(self.patterns,x)
         T_k = GENEO_3(self.vectors,F_k)
-        return GENEO_4(T_k)
+        # out = GENEO_4(T_k)
+        return T_k
     
     
 def GENEO_1(patterns,image):
@@ -29,7 +30,7 @@ def GENEO_1(patterns,image):
             for j in range(image_dimensions[1]):
                 for s in range(pattern_dimension_y):
                     for t in range(pattern_dimension_x):
-                        image_window[s][t] = out_p[i+s][j+t]
+                        image_window[s][t] = out_p[0][0][i+s][j+t]
                 sum = torch.sum(pattern-image_window)/(pattern_dimension_x*pattern_dimension_y)
                 out_image[i][j] = 1 - sum
         final_out.append(out_image.unsqueeze(0))
@@ -43,11 +44,11 @@ def GENEO_2(functions):
 def GENEO_3(vectors,functions):
     image_dimensions = functions[0].size()    
     out = torch.zeros(image_dimensions)
-    for i in image_dimensions[0]:
-        for j in image_dimensions[1]:
+    for i in range(image_dimensions[0]):
+        for j in range(image_dimensions[1]):
             sum = 0
             for k in range(len(vectors)):
-                sum += functions[k][i-torch.floor(vectors[k][0])][j-torch.floor(vectors[k][1])]
+                sum += functions[k][0][0][i-torch.floor(vectors[k][0]).to(dtype = torch.long)][j-torch.floor(vectors[k][1]).to(dtype = torch.long)]
             out[i][j] = sum/k
     return out
 

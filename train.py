@@ -28,7 +28,7 @@ Model = GENEO(patterns)
  # Optimizer
 Opt = torch.optim.Adam(params = Model.parameters() , lr = LEARNING_RATE )
  # Loss function
-Loss_fn = torch.nn.CrossEntropyLoss()
+Loss_fn = torch.nn.MSELoss()
 
 ## Definizione dell'iter di training
 for epoch in range(EPOCHS):
@@ -42,10 +42,11 @@ for epoch in range(EPOCHS):
  # Forward pass
         output = Model(inputs)
  # Calcolo la loss
-        Loss = Loss_fn(output,labels)
+        Loss = Loss_fn(output,torch.zeros(output.shape, requires_grad = True))
  # Loss.backward()
         Loss.backward()
  # Optimizer.step()
+        running_loss += Loss.item()
         Opt.step
         if i % 1000 == 999:
             last_loss = running_loss / 1000 # loss per batch
