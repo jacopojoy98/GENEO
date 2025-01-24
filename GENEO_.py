@@ -6,14 +6,14 @@ import torch.nn.functional as F
 import matplotlib.pyplot as plt
 
 class GENEO(nn.Module):
-    def __init__(self, k, patterns):
+    def __init__(self, patterns):
         super().__init__()  
         self.patterns = patterns
-        self.k = k
+        self.vectors = nn.ParameterList([nn.Parameter(torch.randn(2)) for i in range(len(patterns))])
 
     def forward(self, x):
         F_k = GENEO_1(self.patterns,x)
-        T_k = GENEO_3(self.k,F_k)
+        T_k = GENEO_3(self.vectors,F_k)
         return GENEO_4(T_k)
     
     
@@ -40,7 +40,6 @@ def GENEO_1(patterns,image):
 def GENEO_2(functions):
     return torch.mean(functions, dim = 0)
     
-
 def GENEO_3(vectors,functions):
     image_dimensions = functions[0].size()    
     out = torch.zeros(image_dimensions)
@@ -48,7 +47,7 @@ def GENEO_3(vectors,functions):
         for j in image_dimensions[1]:
             sum = 0
             for k in range(len(vectors)):
-                sum += functions[k][i-vectors[k][0]][j-vectors[k][1]]
+                sum += functions[k][i-torch.floor(vectors[k][0])][j-torch.floor(vectors[k][1])]
             out[i][j] = sum/k
     return out
 
