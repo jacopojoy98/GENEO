@@ -3,7 +3,7 @@ import torch
 import matplotlib.patches as patches
 import matplotlib.pyplot as plt
 import os
-
+from FGENEO import i_clip
 def get_sevens(dataset):
     sevens = []
     for data in dataset:
@@ -27,7 +27,7 @@ def save_images(images, points):
         fig, ax = plt.subplots(1)
         ax.imshow(image.squeeze(), cmap="gray")
         for p in point[1]:
-            rect = patches.Rectangle((p[0]-0.5,p[1]-0.5),1,1,linewidth=0,edgecolor=None,color="red")
+            rect = patches.Rectangle((p[0]-0.5,p[1]-0.5), 1, 1, linewidth=0, edgecolor=None, color="red")
             ax.add_patch(rect)
         os.makedirs("IMG/data/"+str(point[0]),exist_ok=True)
         plt.savefig("IMG/data/"+str(point[0])+"/"+str(point[0])+".png")
@@ -40,7 +40,7 @@ def save_images_cuts(images, points):
             cut = image[p[1]-3:p[1]+4,p[0]-3:p[0]+4]
             fig,ax = plt.subplots(1)
             ax.imshow(cut, cmap="gray")
-            rect = patches.Rectangle((2.5,2.5),1,1,linewidth=0,edgecolor=None,color="red")
+            rect = patches.Rectangle((2.5,2.5),1,1, linewidth=0, edgecolor=None, color="red")
             ax.add_patch(rect)
             plt.savefig("IMG/data/"+str(point[0])+"/"+str(p[0])+"_"+str(p[1])+".png")
             plt.close()
@@ -55,3 +55,14 @@ def save_cuts(images, points):
             patterns.append(cut.unsqueeze(0))
     out = torch.cat(patterns, dim = 0)
     torch.save(out,"patterns.pt")
+
+def plot_vectors(vectors,patterns):
+    for i in range(len(vectors)):
+        fig, ax = plt.subplots(2)
+        ax[0].imshow(patterns[i], cmap="gray")
+        position = np.zeros((28,28))
+        position [i_clip(int(np.floor(vectors[i][0].detach().numpy())))][i_clip(int(np.floor(vectors[i][1].detach().numpy())))] = 1
+        ax[1].imshow(position,cmap="gray")
+        plt.savefig("vector_positions"+str(i)+".png")
+        plt.close()
+
