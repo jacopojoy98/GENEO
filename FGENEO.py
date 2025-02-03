@@ -13,7 +13,7 @@ class GENEO(nn.Module):
         super().__init__()  
         self.treshold = treshold
         self.patterns = patterns
-        self.vectors = nn.ParameterList([nn.Parameter(torch.rand(2)*27, requires_grad=True) for i in range(len(patterns))])
+        self.vectors = nn.ParameterList([nn.Parameter(torch.rand(2)*27, requires_grad=True) for i in range(len(patterns)-1)])
 
     def forward(self, x):
         F_k = GENEO_1_optimized(self.patterns, self.treshold, x)
@@ -123,10 +123,11 @@ def GENEO_3(vectors,functions):
             # input()
             ##
             out[0][0] += functions[k][0][clip(i-s_x)][clip(j-s_y)]*(p)
+    out[0][0] += functions[len(vectors)+1][0][i][j]
         ##
         # plots(out.detach(), "out_2//out_2"+str(k))
         ##
-    out = out / len(vectors)
+    out = out / len(functions)
     ##
     # exit()
     # plots(out[0][0].detach(), "out") 
