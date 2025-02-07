@@ -8,27 +8,72 @@ import time
 from funtions import clip, i_clip, plots, plotsim
 ######   ######
 
+class GENEO_MLP_Small(nn.Module):
+    def __init__(self, patterns, num_classes):
+        super().__init__()
+        self.patterns = patterns
+        self.GENEO2 = nn.Linear(len(patterns), 1)
+        self.ACT = nn.Sigmoid()
+        self.Finael = nn.Linear(28*28, num_classes)
+
+    def forward(self, x):
+        F_k = GENEO_1_optimized(self.patterns, x)
+        CWM = Channel_wise_max(F_k)
+        T_k = self.GENEO2(CWM.permute(2, 3, 1, 0))
+        T_k = self.ACT(T_k)
+        out = self.Finael(T_k.flatten())
+        return self.ACT(out)
+    
+
 class GENEO(nn.Module):
     def __init__(self, patterns,treshold):
         super().__init__()  
         self.treshold = treshold
         self.patterns = patterns
+        
         self.vectors = nn.ParameterList([nn.Parameter(torch.rand(2)*27, requires_grad=True) for i in range(len(patterns)-1)])
 
     def forward(self, x):
         F_k = GENEO_1_optimized(self.patterns, self.treshold, x)
         T_k = GENEO_3(self.vectors,F_k)
-        out = torch.max(T_k.squeeze(-1))
-        
+        out = torch.dot(torch.softmax((T_k*10).flatten(), dim = -1),  T_k.flatten())
         return out
-    
 
-def GENEO_1_optimized(patterns, threshold, image):
+####
+#
+# AGGIUNGERE 
+# SOFTMAX
+#
+####
+
+def Channel_wise_max(tensor):
+    # Get the shape of the tensor
+    patterns_size, b, rows, cols = tensor.shape
+    # Flatten the last two dimensions to find the argmax for each matrix
+    flat_tensor = tensor.view(patterns_size, -1)
+    max_indices = flat_tensor.argmax(dim=1)
+
+    # Create a mask of zeros
+    mask = torch.zeros_like(flat_tensor, dtype=torch.float)
+    # Set the maximum value positions to 1
+    mask[torch.arange(patterns_size), max_indices] = 1
+
+    # Reshape the mask back to the original tensor shape
+    mask = mask.view(patterns_size, b, rows, cols)
+
+    # Retain only the maximum values
+    result = tensor * mask
+
+    return result
+
+
+def GENEO_1_optimized(patterns, image):
+
     # patterns = (K, 1, H_p, W_p)
     # image    = (1, 1, 28, 28)
-    ##
+    # #
     # plots(image, "image")
-    ##
+    #
     K, _, H_p, W_p = patterns.size()
     _, _, H_img, W_img = image.size()
 
@@ -45,8 +90,6 @@ def GENEO_1_optimized(patterns, threshold, image):
     
     # Reshape patterns for broadcasting: (K, 1, H_p*W_p)
     patterns_reshaped = patterns.view(K, 1, H_p * W_p)
-    # print(patterns_reshaped.shape)
-
     # Calculate absolute difference and normalize
     difference = torch.abs(patterns_reshaped - unfolded_image)
     # print(difference.shape)
@@ -56,49 +99,19 @@ def GENEO_1_optimized(patterns, threshold, image):
     out_image = out_image.view(K, 1, H_out, W_out)
 
     # Apply threshold
-    for image in out_image:
-        F.threshold(image, image[0,0,0], 0, inplace=True)
-    ##
+    # for image in out_image:
+    #     F.threshold(image, image[0,0,0], 0, inplace=True)
+    #
     # for i in range(len(out_image)):
     #  plots(out_image[i][0],"out_1//out_1"+str(i))
     #  plots(patterns[i][0], "patterns//pattern"+str(i)) 
     # print(out_image.shape)
-    # exit()
-    ##
+
+    #
     return out_image
 
 
 
-def GENEO_1(patterns, threshold, image):
-    
-    # patterns = (K, 1, H_p, W_p)
-    # image    = (1, 1, 28, 28 )
-
-    final_out=[]
-    for p, pattern in enumerate(patterns):
-        (_, pattern_dimension_x, pattern_dimension_y) = pattern.size()
-        image_dimensions = image.size()
-        out_p =  F.pad(image, (pattern_dimension_y,pattern_dimension_y,pattern_dimension_x,pattern_dimension_x) , "constant", 0)
-        out_image = torch.zeros(image_dimensions)
-        for i in range(image_dimensions[2]):
-            for j in range(image_dimensions[3]):
-
-                image_window = out_p[0][0][i:i+pattern_dimension_x, j:j+pattern_dimension_y]
-        
-                difference = torch.abs(pattern-image_window)
-        
-                sum = torch.sum(difference)/(pattern_dimension_x*pattern_dimension_y)
-        
-                out_image[0][0][i][j] = 1 - sum
-        
-        F.threshold(out_image, threshold, 0, inplace=True)
-        final_out.append(out_image.unsqueeze(0))
-    out = torch.cat(final_out, dim = 0)
-    return out
-
-def GENEO_2(functions):
-    return torch.mean(functions, dim = 0)
-    
 def GENEO_3(vectors,functions):
     image_dimensions = functions.size()    
     i = torch.arange(image_dimensions[2])
@@ -123,6 +136,10 @@ def GENEO_3(vectors,functions):
             # input()
             ##
             out[0][0] += functions[k][0][clip(i-s_x)][clip(j-s_y)]*(p)
+            ##
+            # IMPLEMENTARE SOFTMAX
+            ##
+
     out[0][0] += functions[len(vectors)][0][i][j]
         ##
         # plots(out.detach(), "out_2//out_2"+str(k))
@@ -134,6 +151,37 @@ def GENEO_3(vectors,functions):
     # input()
     ##
     return out
+
+#####
+## BACKUP FUNCTIONS
+#####
+
+# def GENEO_1(patterns, threshold, image):
+    
+#     # patterns = (K, 1, H_p, W_p)
+#     # image    = (1, 1, 28, 28 )
+
+#     final_out=[]
+#     for p, pattern in enumerate(patterns):
+#         (_, pattern_dimension_x, pattern_dimension_y) = pattern.size()
+#         image_dimensions = image.size()
+#         out_p =  F.pad(image, (pattern_dimension_y,pattern_dimension_y,pattern_dimension_x,pattern_dimension_x) , "constant", 0)
+#         out_image = torch.zeros(image_dimensions)
+#         for i in range(image_dimensions[2]):
+#             for j in range(image_dimensions[3]):
+
+#                 image_window = out_p[0][0][i:i+pattern_dimension_x, j:j+pattern_dimension_y]
+        
+#                 difference = torch.abs(pattern-image_window)
+        
+#                 sum = torch.sum(difference)/(pattern_dimension_x*pattern_dimension_y)
+        
+#                 out_image[0][0][i][j] = 1 - sum
+        
+#         F.threshold(out_image, threshold, 0, inplace=True)
+#         final_out.append(out_image.unsqueeze(0))
+#     out = torch.cat(final_out, dim = 0)
+#     return out
 
 # def GENEO_3(vectors,functions):
 #     image_dimensions = functions[0].size()    
@@ -170,7 +218,7 @@ def GENEO_3(vectors,functions):
 #             out[i][j] = sum/k
 #     return out
 
-def GENEO_4(image):
-    norm = torch.norm(image, p="inf")
-    return 1/norm
+# def GENEO_4(image):
+#     norm = torch.norm(image, p="inf")
+#     return 1/norm
 

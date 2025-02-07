@@ -3,6 +3,29 @@ import torch
 import matplotlib.patches as patches
 import matplotlib.pyplot as plt
 import os
+import torch.nn.functional as F
+
+def extract_weighted_position(matrix):
+    matrix = np.array(matrix)
+    flat_matrix = matrix.flatten()
+
+    # Ensure weights are non-negative
+    weights = flat_matrix
+
+    if np.sum(weights) == 0:
+        raise ValueError("All matrix values are zero or negative; no valid positions to sample.")
+
+    # Probability distribution
+    probabilities = weights / np.sum(weights)
+
+    # Weighted random selection
+    selected_index = np.random.choice(len(flat_matrix), p=probabilities)
+
+    # Map back to 2D coordinates
+    rows, cols = matrix.shape
+    row, col = divmod(selected_index, cols)
+
+    return (row, col)
 
 def clip(value, min_val=0, max_val=27):
     return torch.clamp(value, min=min_val, max=max_val)
@@ -88,17 +111,19 @@ def save_images_cuts(images, points):
             plt.savefig("IMG/data/"+str(point[0])+"/"+str(p[0])+"_"+str(p[1])+".png")
             plt.close()
 
-def save_patterns(images, points, size_cuts, file):
-    s=0
+def save_patterns(images, size_cuts, points_per_image, num_images, file):
     half_size_cuts = size_cuts//2
     patterns = []
-    for point in points:
-        image = images[point[0]][0].squeeze()
-        for p in point[1]:
+    for i in range(num_images):
+        image = images[i][0].squeeze()
+        image = F.pad(image, (half_size_cuts, half_size_cuts, half_size_cuts, half_size_cuts), mode="constant", value=0)
+        points = [extract_weighted_position(image) for i in range(points_per_image)]
+        for p in points:
             cut = image[p[1]-half_size_cuts:p[1]+half_size_cuts+1,\
                         p[0]-half_size_cuts:p[0]+half_size_cuts+1]
             patterns.append(cut.unsqueeze(0).unsqueeze(0))
-    out = torch.cat(patterns, dim = 0)
+    out = torch.cat(patterns, dim = 0)    ######## 
+    # out = torch.cat(patterns, dim = 0)    ######## LA RIGA IN CUI LE COSE FUNZIONANO SENZA BATCH È QUESTA, ORA CAMBIO PER PROVARE A BATCHARE
     torch.save(out,file)
 
 def plot_vectors(vectors,patterns, EPOCH):
