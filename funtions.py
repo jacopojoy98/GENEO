@@ -3,7 +3,21 @@ import torch
 import matplotlib.patches as patches
 import matplotlib.pyplot as plt
 import os
+import torchvision
 import torch.nn.functional as F
+
+def fidelity(model_1, model_2, dataloader):
+    fid = 0
+    total =0
+    for i, data in enumerate(dataloader):
+        output_1 = model_1(data)
+        output_2 = model_2(data)
+        total+=1
+        if torch.argmax(output_1)==torch.argmax(output_2):
+            fid +=1
+        if i %100 ==0:
+            print(fid/total)
+    print(fid/len(dataloader.dataset))
 
 def extract_weighted_position(matrix):
     matrix = np.array(matrix)
@@ -44,11 +58,11 @@ def plots(matrix_,name):
     else:
         matrix = matrix_
     plt.imshow(matrix, cmap="gray")
-    for i in range(matrix.shape[0]):
-        for j in range(matrix.shape[1]):
-            plt.text(j, i, f"{matrix[i,j]:.2f}",  # Formattazione con due decimali
-                     ha="center", va="center",size=4.5, color="white" if matrix[i, j] < torch.mean(matrix) else "black")
-    plt.savefig("DEBUG_IMG/"+name+".png")
+    # for i in range(matrix.shape[0]):
+    #     for j in range(matrix.shape[1]):
+    #         plt.text(j, i, f"{matrix[i,j]:.2f}",  # Formattazione con due decimali
+    #                  ha="center", va="center",size=4.5, color="white" if matrix[i, j] < torch.mean(matrix) else "black")
+    plt.savefig("/home/jcolombini/GENEO/DEBUG_IMG/"+name+".png")
     plt.close()
     # print("saved "+ name, end ="")
     # input()
@@ -112,11 +126,11 @@ def save_images_cuts(images, points):
             plt.close()
 
 def save_patterns(images, size_cuts, points_per_image, num_images, file):
-    half_size_cuts = size_cuts//2
+    half_size_cuts = size_cuts//2 
     patterns = []
     for i in range(num_images):
         image = images[i][0].squeeze()
-        image = F.pad(image, (half_size_cuts, half_size_cuts, half_size_cuts, half_size_cuts), mode="constant", value=0)
+        image = F.pad(image, (half_size_cuts+1, half_size_cuts+1, half_size_cuts+1, half_size_cuts+1), mode="constant", value=0)
         points = [extract_weighted_position(image) for i in range(points_per_image)]
         for p in points:
             cut = image[p[1]-half_size_cuts:p[1]+half_size_cuts+1,\
@@ -136,3 +150,5 @@ def plot_vectors(vectors,patterns, EPOCH):
         plt.savefig("Vector_positions/"+str(i)+"_E"+str(EPOCH)+".png")
         plt.close()
 
+if __name__ == "__main__":
+    pass

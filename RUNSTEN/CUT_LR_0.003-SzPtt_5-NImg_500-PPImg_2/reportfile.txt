@@ -1,0 +1,13 @@
+NUmber_of_parameters= 5011 
+ NUmber_of_parameters= 5011 
+ NUmber_of_parameters= 5011 
+ epoch 0, accuracy 0.8669166666666667 
+epoch 1, accuracy 0.8926666666666667 
+epoch 2, accuracy 0.9039166666666667 
+epoch 3, accuracy 0.90675 
+epoch 4, accuracy 0.9030833333333333 
+Forward time -0.00010672095231711864 
+Total time :7.148995064198971e-05NUmber_of_parameters= 5011 
+ NUmber_of_parameters= 5011 
+ NUmber_of_parameters= 5011 
+ 

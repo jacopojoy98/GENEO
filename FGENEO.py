@@ -98,19 +98,44 @@ def GENEO_1_optimized(patterns, image):
     out_image = 1 - normalized_diff
     out_image = out_image.view(K, 1, H_out, W_out)
 
-    # Apply threshold
-    # for image in out_image:
-    #     F.threshold(image, image[0,0,0], 0, inplace=True)
-    #
-    # for i in range(len(out_image)):
-    #  plots(out_image[i][0],"out_1//out_1"+str(i))
-    #  plots(patterns[i][0], "patterns//pattern"+str(i)) 
-    # print(out_image.shape)
 
-    #
+
     return out_image
 
+def GENEO_1_toro(patterns, image):
 
+    # patterns = (K, 1, H_p, W_p)
+    # image    = (1, 1, 28, 28)
+    # #
+    # plots(image, "image")
+    #
+    K, _, H_p, W_p = patterns.size()
+    _, _, H_img, W_img = image.size()
+
+    # Pad the image to handle borders
+    padded_image = F.pad(image, (W_p//2, W_p//2, H_p//2, H_p//2), mode="circular")
+
+    # Extract sliding windows (unfolded image)
+    unfolded_image = padded_image.unfold(2, H_p, 1).unfold(3, W_p, 1)  # (1, 1, H_out, W_out, H_p, W_p)
+    H_out, W_out = unfolded_image.size(2), unfolded_image.size(3)
+    
+    # Reshape to (1, 1, H_out * W_out, H_p * W_p)
+    unfolded_image = unfolded_image.contiguous().view(1, 1, H_out * W_out, H_p * W_p)
+    # print(unfolded_image.shape)
+    
+    # Reshape patterns for broadcasting: (K, 1, H_p*W_p)
+    patterns_reshaped = patterns.view(K, 1, H_p * W_p)
+    # Calculate absolute difference and normalize
+    difference = torch.abs(patterns_reshaped - unfolded_image)
+    # print(difference.shape)
+    normalized_diff = torch.mean(difference, dim=-1)  # (K, 1, H_out * W_out)
+    # Compute output
+    out_image = 1 - normalized_diff
+    out_image = out_image.view(K, 1, H_out, W_out)
+    out_flat = torch.nn.functional.max_pool2d(out_image,(H_out, W_out))
+    print(out_flat.shape)
+    exit()
+    return out_flat
 
 def GENEO_3(vectors,functions):
     image_dimensions = functions.size()    

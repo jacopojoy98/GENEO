@@ -1,0 +1,8 @@
+NUmber_of_parameters= 10010 
+epoch 0, accuracy 0.7416666666666667 
+epoch 1, accuracy 0.7923333333333333 
+epoch 2, accuracy 0.8228333333333333 
+epoch 3, accuracy 0.8351666666666666 
+epoch 4, accuracy 0.8644166666666667 
+epoch 5, accuracy 0.8310833333333333 
+epoch 6, accuracy 0.8973333333333333 
