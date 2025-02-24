@@ -7,13 +7,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 from random import randint
 import timeit
+from tqdm import tqdm
 from math import floor, ceil
 #
 import config
 from FGENEO import GENEO, GENEO_MLP_Small
-from FGENEO_batch import GENEO_MLP_Small_b, GENEO_thorus
+from FGENEO_batch import GENEO_MLP_Small_b, GENEO_thorus, patterns_preprocess
 from FGENEO_b_r import GENEO_MLP_Small_b_r
-from FCNN import CNN
+from FCNN import CNN, MLP, MLP2
 from funtions import plot_vectors, save_patterns, get_points,fidelity, plots
 
 # directory_model1 = "/home/jcolombini/GENEO/RUNSTEN/LR_0.003-SzPtt_9-NImg_500-PPImg_2"
@@ -34,6 +35,7 @@ from funtions import plot_vectors, save_patterns, get_points,fidelity, plots
 # dataoader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True)
 # fidelity(model1, model2, dataoader)
 # exit()
+
 RUN = 1
 
 ## Definizione iperparametri
@@ -52,10 +54,20 @@ transforms = torchvision.transforms.Compose([
 )
 ## Import dei dati
 dataset = torchvision.datasets.MNIST(root = "Dataset", transform = transforms)
-# tmpMODEL = CNN(NUM_CLASSES)
-# tmpMODEL.load_state_dict(torch.load("/home/jcolombini/GENEO/RUNSTEN/BENCHMARK_CNN/model.pt",weights_only=True))
-# dataset= [ ( data[0]/255,F.one_hot(torch.argmax(tmpMODEL(data[0]/255)), num_classes=10).type(torch.float32)) for data in dataset ]
+FIDELITY_MODEL = 0
+preprocess = 1
+Report = "reportfile.txt" 
 
+if FIDELITY_MODEL:
+      tmpMODEL = CNN(NUM_CLASSES)
+      tmpMODEL.load_state_dict(torch.load("/home/jcolombini/GENEO/RUNSTEN/BENCHMARK_CNN/model.pt",weights_only=True))
+      dataset= [ ( data[0]/255,F.one_hot(torch.argmax(tmpMODEL(data[0]/255)), num_classes=10).type(torch.float32)) for data in dataset ]
+
+for t, data in enumerate(dataset):
+     plots(data[0][0]/255, str(t))
+     plots(F.avg_pool2d(data[0]/255,(2,2),2)[0], "pooled"+str(t))
+     input()
+exit()
 # #F.avg_pool2d(data[0]/255,(2,2),2)
 if NUM_CLASSES == 10:
       dataset= [(data[0]/255, F.one_hot(torch.tensor(data[1]), num_classes=10).type(torch.float32) ) for data in dataset ]
@@ -63,12 +75,7 @@ else:
       datasevens = [(data[0]/255, torch.tensor([0,1], dtype = torch.float32)) for data in dataset if (data[1]==7 )]
       datanonsevens = [(data[0]/255, torch.tensor([1,0], dtype = torch.float32))for data in dataset if (data[1]!=7)]
       dataset = datasevens + datanonsevens[:len(datasevens)]
-## separazione in train e test
-trainset, testset = torch.utils.data.random_split(dataset,[1-TEST_PERCENT,TEST_PERCENT])
-train_loader = torch.utils.data.DataLoader(trainset, batch_size=BATCH_SIZE, shuffle=True)
-test_loader  = torch.utils.data.DataLoader(testset, batch_size=BATCH_SIZE, shuffle=True)
 
-## Spostamento della directory 
 if NUM_CLASSES == 2:
     RUNS_FOLDER = "RUNS"
 else:
@@ -81,17 +88,35 @@ if RUN:
       os.chdir(RUN_NAME)
       shutil.copy("../../config.py","config.py")
 
-Report = "reportfile.txt" 
-## Definizione di:
- # Patterns
-###
-if RUN_NAME != "BENCHMARK_CNN":
-      save_patterns(dataset,SIZE_PATTERNS,POINTS_PER_IMAGE, NUM_IMAGES, PATTERNS_FILE)
+trainset, testset = torch.utils.data.random_split(dataset,[1-TEST_PERCENT,TEST_PERCENT])
+
+if RUN_NAME != "BENCHMARK_CNN" and RUN_NAME != "BENCHMARK_MLP2":
+      save_patterns(trainset, SIZE_PATTERNS,POINTS_PER_IMAGE, NUM_IMAGES, PATTERNS_FILE)
       patterns = torch.load(PATTERNS_FILE, weights_only=True)
+
+## separazione in train e test
+train_loader = torch.utils.data.DataLoader(trainset, batch_size=BATCH_SIZE, shuffle=True)
+test_loader  = torch.utils.data.DataLoader(testset, batch_size=BATCH_SIZE, shuffle=True)
+
+new_trainset = []
+new_testset = []
+if preprocess:
+      print("inizio preprocessing")
+      Preprocess = patterns_preprocess(patterns)
+      for data in tqdm(train_loader):
+            new_trainset.append(( (Preprocess(data[0])), data[1]) )
+
+      for data in tqdm(test_loader):
+            new_testset.append(((Preprocess(data[0])),data[1]))
+      train_loader = new_trainset
+      test_loader = new_testset
+
 ###
  # Modello
 if RUN_NAME == "BENCHMARK_CNN":
       Model = CNN(NUM_CLASSES)
+elif RUN_NAME == "BENCHMARK_MLP2":
+      Model = MLP2(NUM_CLASSES)
 else:
       Model = GENEO_thorus(patterns, num_classes=NUM_CLASSES)
 with open(Report, "a") as f:
@@ -166,8 +191,12 @@ for epoch in range(EPOCHS):
             ax.plot(np.arange(len(test_losses))*(int(len(train_losses)//len(test_losses))), test_losses, color = "r")
             if RUN:
              plt.savefig("Train.png") 
-if RUN:
-      torch.save(Model.state_dict(), "model.pt")
-with open(Report, "a") as f:
-      f.write('Forward time {} \n'.format(end_one_forward  -start_one_forward))
-      f.write('Total time :{}'.format(timeit.timeit()-start))
+
+if epoch%20==19:
+      if RUN:
+            np.savetxt("train_losses.txt",train_losses)
+            np.savetxt("test_losses.txt",test_losses)
+            torch.save(Model.state_dict(), "model.pt")
+      with open(Report, "a") as f:
+            f.write('Forward time {} \n'.format(end_one_forward  -start_one_forward))
+            f.write('Total time :{}'.format(timeit.timeit()-start))

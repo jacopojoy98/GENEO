@@ -28,18 +28,25 @@ class GENEO_MLP_Small_b(nn.Module):
 class GENEO_thorus(nn.Module):
     def __init__(self, patterns, num_classes):
         super().__init__()
-        self.patterns = patterns.permute(1,0,2,3)
+        # self.patterns = patterns.permute(1,0,2,3)
         self.GENEO2 = nn.Linear(len(patterns), num_classes)
         self.ACT = nn.Sigmoid()
         # self.Finael = nn.Linear(20*20, num_classes)
 
     def forward(self, x):
-        F_k = GENEO_1_thorus(self.patterns, x)
-        CWM = F_k.squeeze(-1).squeeze(-1)
+        # F_k = GENEO_1_thorus(self.patterns, x)
+        CWM = x.squeeze(-1).squeeze(-1)
         T_k = self.GENEO2(CWM)
         # T_k = self.ACT(T_k)
         # out = self.Finael(T_k.view(T_k.shape[0],-1))
         return self.ACT(T_k)
+
+class patterns_preprocess():
+    def __init__(self,patterns):
+        self.patterns = patterns.permute(1,0,2,3)
+    
+    def __call__(self,x):
+        return GENEO_1_thorus(self.patterns, x)
 
 def Channel_wise_max(tensor):
     # Get the shape of the tensor

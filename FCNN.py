@@ -23,3 +23,22 @@ class CNN(nn.Module):
         x = self.fc2(x)
         return F.sigmoid(x)
 
+class MLP(nn.Module):
+    def __init__(self, num_classes):
+        super(MLP, self).__init__()
+        self.L1 = nn.Linear(28*28,num_classes)
+        self.Act = nn.Sigmoid()
+
+    def forward(self, x):
+        return self.Act(self.L1(x.view(8,28*28)))
+    
+class MLP2(nn.Module):
+    def __init__(self, num_classes):
+        super(MLP2, self).__init__()
+        self.L1 = nn.Linear(28*28,4)
+        self.L2 = nn.Linear(4,10)
+        self.Act = nn.Sigmoid()
+
+    def forward(self, x):
+        k1 = self.Act(self.L1(x.view(8,28*28))) 
+        return self.Act(self.L2(k1))
