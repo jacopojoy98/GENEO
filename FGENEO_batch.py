@@ -12,15 +12,12 @@ from funtions import clip, i_clip, plots, plotsim
 class GENEO_MLP_Small_b(nn.Module):
     def __init__(self, patterns, num_classes):
         super().__init__()
-        self.patterns = patterns.permute(1,0,2,3)
         self.GENEO2 = nn.Linear(len(patterns), 1)
         self.ACT = nn.Sigmoid()
-        self.Finael = nn.Linear(20*20, num_classes)
+        self.Finael = nn.Linear(28*28, num_classes)
 
     def forward(self, x):
-        F_k = GENEO_1(self.patterns, x)
-        CWM = Channel_wise_max(F_k)
-        T_k = self.GENEO2(CWM.permute(0,2, 3, 1))
+        T_k = self.GENEO2(x.permute(0,2, 3, 1))
         T_k = self.ACT(T_k)
         out = self.Finael(T_k.view(T_k.shape[0],-1))
         return self.ACT(out)
@@ -41,12 +38,20 @@ class GENEO_thorus(nn.Module):
         # out = self.Finael(T_k.view(T_k.shape[0],-1))
         return self.ACT(T_k)
 
-class patterns_preprocess():
+class patterns_preprocess_thorus():
     def __init__(self,patterns):
         self.patterns = patterns.permute(1,0,2,3)
     
     def __call__(self,x):
         return GENEO_1_thorus(self.patterns, x)
+    
+class patterns_preprocess():
+    def __init__(self,patterns):
+        self.patterns = patterns.permute(1,0,2,3)
+    
+    def __call__(self,x):
+        T = GENEO_1(self.patterns, x)
+        return Channel_wise_max(T)
 
 def Channel_wise_max(tensor):
     # Get the shape of the tensor

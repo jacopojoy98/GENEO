@@ -1,8 +1,0 @@
-NUmber_of_parameters= 2971 
- epoch 0, accuracy 0.9474166666666667 
-epoch 1, accuracy 0.95125 
-epoch 2, accuracy 0.9525 
-epoch 3, accuracy 0.9565833333333333 
-epoch 4, accuracy 0.9543333333333334 
-Forward time -4.94497362524271e-06 
-Total time :-0.00016709498595446348
